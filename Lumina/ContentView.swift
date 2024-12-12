@@ -376,7 +376,7 @@ struct NetworkSelectionView: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach([Network.mainnet, .arabica, .mocha, .private], id: \.self) { network in
+                ForEach([Network.mainnet, .arabica, .mocha, .custom(id: "private")], id: \.self) { network in
                     Button {
                         Task {
                             await viewModel.changeNetwork(network)
@@ -408,7 +408,7 @@ extension Network: CustomStringConvertible {
         case .mainnet: return "Mainnet"
         case .arabica: return "Arabica"
         case .mocha: return "Mocha"
-        case .private: return "Private"
+        case .custom(let id): return "Custom: \(id)"
         }
     }
 }

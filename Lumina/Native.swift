@@ -512,56 +512,144 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 
 
+/**
+ * The main Lumina node that manages the connection to the Celestia network.
+ */
 public protocol LuminaNodeProtocol : AnyObject {
     
+    /**
+     * Gets list of currently connected peer IDs.
+     */
     func connectedPeers() async throws  -> [PeerId]
     
+    /**
+     * Returns the next event from the node's event channel.
+     */
     func eventsChannel() async throws  -> NodeEvent?
     
+    /**
+     * Get a synced header for the block with a given hash.
+     */
     func getHeaderByHash(hash: String) async throws  -> String
     
+    /**
+     * Get a synced header for the block with a given height.
+     */
     func getHeaderByHeight(height: UInt64) async throws  -> String
     
+    /**
+     * Gets headers from the given heights range.
+     *
+     * If start of the range is undefined (None), the first returned header will be of height 1.
+     * If end of the range is undefined (None), the last returned header will be the last header in the
+     * store.
+     *
+     * Returns array of serialized ExtendedHeader strings.
+     */
     func getHeaders(startHeight: UInt64?, endHeight: UInt64?) async throws  -> [String]
     
+    /**
+     * Gets the latest locally synced header.
+     */
     func getLocalHeadHeader() async throws  -> String
     
+    /**
+     * Gets the latest header announced in the network.
+     */
     func getNetworkHeadHeader() async throws  -> String
     
+    /**
+     * Gets data sampling metadata for a height.
+     *
+     * Returns serialized SamplingMetadata string if metadata exists for the height.
+     */
     func getSamplingMetadata(height: UInt64) async throws  -> String?
     
+    /**
+     * Checks if the node is currently running.
+     */
     func isRunning() async  -> Bool
     
+    /**
+     * Gets list of addresses the node is listening to.
+     */
     func listeners() async throws  -> [String]
     
+    /**
+     * Gets the local peer ID as a string.
+     */
     func localPeerId() async throws  -> String
     
+    /**
+     * Gets current network information.
+     */
     func networkInfo() async throws  -> NetworkInfo
     
+    /**
+     * Gets information about connected peers.
+     */
     func peerTrackerInfo() async throws  -> PeerTrackerInfo
     
+    /**
+     * Request the head header from the network.
+     *
+     * Returns a serialized ExtendedHeader string.
+     */
     func requestHeadHeader() async throws  -> String
     
+    /**
+     * Request a header for the block with a given hash from the network.
+     */
     func requestHeaderByHash(hash: String) async throws  -> String
     
+    /**
+     * Requests a header by its height.
+     */
     func requestHeaderByHeight(height: UInt64) async throws  -> String
     
+    /**
+     * Request headers in range (from, from + amount] from the network.
+     *
+     * The headers will be verified with the `from` header.
+     * Returns array of serialized ExtendedHeader strings.
+     */
     func requestVerifiedHeaders(from: String, amount: UInt64) async throws  -> [String]
     
+    /**
+     * Sets whether a peer with give ID is trusted.
+     */
     func setPeerTrust(peerId: PeerId, isTrusted: Bool) async throws 
     
+    /**
+     * Starts the Lumina node. Returns true if successfully started.
+     */
     func start() async throws  -> Bool
     
+    /**
+     * Stops the running node and closes all network connections.
+     */
     func stop() async throws 
     
+    /**
+     * Gets current syncing information.
+     */
     func syncerInfo() async throws  -> SyncingInfo
     
+    /**
+     * Waits until the node is connected to at least one peer.
+     */
     func waitConnected() async throws 
     
+    /**
+     * Waits until the node is connected to at least one trusted peer.
+     */
     func waitConnectedTrusted() async throws 
     
 }
 
+/**
+ * The main Lumina node that manages the connection to the Celestia network.
+ */
 open class LuminaNode:
     LuminaNodeProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -599,6 +687,9 @@ open class LuminaNode:
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_native_fn_clone_luminanode(self.pointer, $0) }
     }
+    /**
+     * Sets a new connection to the Lumina node for the specified network.
+     */
 public convenience init(network: Network)throws  {
     let pointer =
         try rustCallWithError(FfiConverterTypeLuminaError.lift) {
@@ -620,6 +711,9 @@ public convenience init(network: Network)throws  {
     
 
     
+    /**
+     * Gets list of currently connected peer IDs.
+     */
 open func connectedPeers()async throws  -> [PeerId] {
     return
         try  await uniffiRustCallAsync(
@@ -637,6 +731,9 @@ open func connectedPeers()async throws  -> [PeerId] {
         )
 }
     
+    /**
+     * Returns the next event from the node's event channel.
+     */
 open func eventsChannel()async throws  -> NodeEvent? {
     return
         try  await uniffiRustCallAsync(
@@ -654,6 +751,9 @@ open func eventsChannel()async throws  -> NodeEvent? {
         )
 }
     
+    /**
+     * Get a synced header for the block with a given hash.
+     */
 open func getHeaderByHash(hash: String)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -671,6 +771,9 @@ open func getHeaderByHash(hash: String)async throws  -> String {
         )
 }
     
+    /**
+     * Get a synced header for the block with a given height.
+     */
 open func getHeaderByHeight(height: UInt64)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -688,6 +791,15 @@ open func getHeaderByHeight(height: UInt64)async throws  -> String {
         )
 }
     
+    /**
+     * Gets headers from the given heights range.
+     *
+     * If start of the range is undefined (None), the first returned header will be of height 1.
+     * If end of the range is undefined (None), the last returned header will be the last header in the
+     * store.
+     *
+     * Returns array of serialized ExtendedHeader strings.
+     */
 open func getHeaders(startHeight: UInt64?, endHeight: UInt64?)async throws  -> [String] {
     return
         try  await uniffiRustCallAsync(
@@ -705,6 +817,9 @@ open func getHeaders(startHeight: UInt64?, endHeight: UInt64?)async throws  -> [
         )
 }
     
+    /**
+     * Gets the latest locally synced header.
+     */
 open func getLocalHeadHeader()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -722,6 +837,9 @@ open func getLocalHeadHeader()async throws  -> String {
         )
 }
     
+    /**
+     * Gets the latest header announced in the network.
+     */
 open func getNetworkHeadHeader()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -739,6 +857,11 @@ open func getNetworkHeadHeader()async throws  -> String {
         )
 }
     
+    /**
+     * Gets data sampling metadata for a height.
+     *
+     * Returns serialized SamplingMetadata string if metadata exists for the height.
+     */
 open func getSamplingMetadata(height: UInt64)async throws  -> String? {
     return
         try  await uniffiRustCallAsync(
@@ -756,6 +879,9 @@ open func getSamplingMetadata(height: UInt64)async throws  -> String? {
         )
 }
     
+    /**
+     * Checks if the node is currently running.
+     */
 open func isRunning()async  -> Bool {
     return
         try!  await uniffiRustCallAsync(
@@ -774,6 +900,9 @@ open func isRunning()async  -> Bool {
         )
 }
     
+    /**
+     * Gets list of addresses the node is listening to.
+     */
 open func listeners()async throws  -> [String] {
     return
         try  await uniffiRustCallAsync(
@@ -791,6 +920,9 @@ open func listeners()async throws  -> [String] {
         )
 }
     
+    /**
+     * Gets the local peer ID as a string.
+     */
 open func localPeerId()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -808,6 +940,9 @@ open func localPeerId()async throws  -> String {
         )
 }
     
+    /**
+     * Gets current network information.
+     */
 open func networkInfo()async throws  -> NetworkInfo {
     return
         try  await uniffiRustCallAsync(
@@ -825,6 +960,9 @@ open func networkInfo()async throws  -> NetworkInfo {
         )
 }
     
+    /**
+     * Gets information about connected peers.
+     */
 open func peerTrackerInfo()async throws  -> PeerTrackerInfo {
     return
         try  await uniffiRustCallAsync(
@@ -842,6 +980,11 @@ open func peerTrackerInfo()async throws  -> PeerTrackerInfo {
         )
 }
     
+    /**
+     * Request the head header from the network.
+     *
+     * Returns a serialized ExtendedHeader string.
+     */
 open func requestHeadHeader()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -859,6 +1002,9 @@ open func requestHeadHeader()async throws  -> String {
         )
 }
     
+    /**
+     * Request a header for the block with a given hash from the network.
+     */
 open func requestHeaderByHash(hash: String)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -876,6 +1022,9 @@ open func requestHeaderByHash(hash: String)async throws  -> String {
         )
 }
     
+    /**
+     * Requests a header by its height.
+     */
 open func requestHeaderByHeight(height: UInt64)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
@@ -893,6 +1042,12 @@ open func requestHeaderByHeight(height: UInt64)async throws  -> String {
         )
 }
     
+    /**
+     * Request headers in range (from, from + amount] from the network.
+     *
+     * The headers will be verified with the `from` header.
+     * Returns array of serialized ExtendedHeader strings.
+     */
 open func requestVerifiedHeaders(from: String, amount: UInt64)async throws  -> [String] {
     return
         try  await uniffiRustCallAsync(
@@ -910,6 +1065,9 @@ open func requestVerifiedHeaders(from: String, amount: UInt64)async throws  -> [
         )
 }
     
+    /**
+     * Sets whether a peer with give ID is trusted.
+     */
 open func setPeerTrust(peerId: PeerId, isTrusted: Bool)async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -927,6 +1085,9 @@ open func setPeerTrust(peerId: PeerId, isTrusted: Bool)async throws  {
         )
 }
     
+    /**
+     * Starts the Lumina node. Returns true if successfully started.
+     */
 open func start()async throws  -> Bool {
     return
         try  await uniffiRustCallAsync(
@@ -944,6 +1105,9 @@ open func start()async throws  -> Bool {
         )
 }
     
+    /**
+     * Stops the running node and closes all network connections.
+     */
 open func stop()async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -961,6 +1125,9 @@ open func stop()async throws  {
         )
 }
     
+    /**
+     * Gets current syncing information.
+     */
 open func syncerInfo()async throws  -> SyncingInfo {
     return
         try  await uniffiRustCallAsync(
@@ -978,6 +1145,9 @@ open func syncerInfo()async throws  -> SyncingInfo {
         )
 }
     
+    /**
+     * Waits until the node is connected to at least one peer.
+     */
 open func waitConnected()async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -995,6 +1165,9 @@ open func waitConnected()async throws  {
         )
 }
     
+    /**
+     * Waits until the node is connected to at least one trusted peer.
+     */
 open func waitConnectedTrusted()async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -1067,6 +1240,9 @@ public func FfiConverterTypeLuminaNode_lower(_ value: LuminaNode) -> UnsafeMutab
 }
 
 
+/**
+ * A range of blocks.
+ */
 public struct BlockRange {
     public var start: UInt64
     public var end: UInt64
@@ -1133,18 +1309,63 @@ public func FfiConverterTypeBlockRange_lower(_ value: BlockRange) -> RustBuffer 
 }
 
 
+/**
+ * Counters of ongoing network connections.
+ */
 public struct ConnectionCounters {
+    /**
+     * The current number of connections.
+     */
     public var numConnections: UInt32
+    /**
+     * The current number of pending connections.
+     */
     public var numPending: UInt32
+    /**
+     * The current number of incoming connections.
+     */
     public var numPendingIncoming: UInt32
+    /**
+     * The current number of outgoing connections.
+     */
     public var numPendingOutgoing: UInt32
+    /**
+     * The current number of established connections.
+     */
     public var numEstablished: UInt32
+    /**
+     * The current number of established inbound connections.
+     */
     public var numEstablishedIncoming: UInt32
+    /**
+     * The current number of established outbound connections.
+     */
     public var numEstablishedOutgoing: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(numConnections: UInt32, numPending: UInt32, numPendingIncoming: UInt32, numPendingOutgoing: UInt32, numEstablished: UInt32, numEstablishedIncoming: UInt32, numEstablishedOutgoing: UInt32) {
+    public init(
+        /**
+         * The current number of connections.
+         */numConnections: UInt32, 
+        /**
+         * The current number of pending connections.
+         */numPending: UInt32, 
+        /**
+         * The current number of incoming connections.
+         */numPendingIncoming: UInt32, 
+        /**
+         * The current number of outgoing connections.
+         */numPendingOutgoing: UInt32, 
+        /**
+         * The current number of established connections.
+         */numEstablished: UInt32, 
+        /**
+         * The current number of established inbound connections.
+         */numEstablishedIncoming: UInt32, 
+        /**
+         * The current number of established outbound connections.
+         */numEstablishedOutgoing: UInt32) {
         self.numConnections = numConnections
         self.numPending = numPending
         self.numPendingIncoming = numPendingIncoming
@@ -1240,12 +1461,24 @@ public func FfiConverterTypeConnectionCounters_lower(_ value: ConnectionCounters
 
 
 public struct NetworkInfo {
+    /**
+     * The total number of connected peers.
+     */
     public var numPeers: UInt32
+    /**
+     * Counters of ongoing network connections.
+     */
     public var connectionCounters: ConnectionCounters
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(numPeers: UInt32, connectionCounters: ConnectionCounters) {
+    public init(
+        /**
+         * The total number of connected peers.
+         */numPeers: UInt32, 
+        /**
+         * Counters of ongoing network connections.
+         */connectionCounters: ConnectionCounters) {
         self.numPeers = numPeers
         self.connectionCounters = connectionCounters
     }
@@ -1305,15 +1538,42 @@ public func FfiConverterTypeNetworkInfo_lower(_ value: NetworkInfo) -> RustBuffe
 }
 
 
+/**
+ * Information about a node event.
+ */
 public struct NodeEventInfo {
+    /**
+     * The event that occurred.
+     */
     public var event: NodeEvent
+    /**
+     * Unix timestamp in milliseconds when the event occurred.
+     */
     public var timestamp: UInt64
+    /**
+     * Source file path where the event was emitted.
+     */
     public var filePath: String
+    /**
+     * Line number in source file where event was emitted.
+     */
     public var fileLine: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(event: NodeEvent, timestamp: UInt64, filePath: String, fileLine: UInt32) {
+    public init(
+        /**
+         * The event that occurred.
+         */event: NodeEvent, 
+        /**
+         * Unix timestamp in milliseconds when the event occurred.
+         */timestamp: UInt64, 
+        /**
+         * Source file path where the event was emitted.
+         */filePath: String, 
+        /**
+         * Line number in source file where event was emitted.
+         */fileLine: UInt32) {
         self.event = event
         self.timestamp = timestamp
         self.filePath = filePath
@@ -1388,11 +1648,17 @@ public func FfiConverterTypeNodeEventInfo_lower(_ value: NodeEventInfo) -> RustB
 
 
 public struct PeerId {
+    /**
+     * The peer ID stored as base58 string.
+     */
     public var peerId: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(peerId: String) {
+    public init(
+        /**
+         * The peer ID stored as base58 string.
+         */peerId: String) {
         self.peerId = peerId
     }
 }
@@ -1592,13 +1858,28 @@ public func FfiConverterTypeShareCoordinate_lower(_ value: ShareCoordinate) -> R
 }
 
 
+/**
+ * Status of the node syncing.
+ */
 public struct SyncingInfo {
+    /**
+     * Ranges of headers that are already synchronised
+     */
     public var storedHeaders: [BlockRange]
+    /**
+     * Syncing target. The latest height seen in the network that was successfully verified.
+     */
     public var subjectiveHead: UInt64
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(storedHeaders: [BlockRange], subjectiveHead: UInt64) {
+    public init(
+        /**
+         * Ranges of headers that are already synchronised
+         */storedHeaders: [BlockRange], 
+        /**
+         * Syncing target. The latest height seen in the network that was successfully verified.
+         */subjectiveHead: UInt64) {
         self.storedHeaders = storedHeaders
         self.subjectiveHead = subjectiveHead
     }
@@ -1658,22 +1939,64 @@ public func FfiConverterTypeSyncingInfo_lower(_ value: SyncingInfo) -> RustBuffe
 }
 
 
+/**
+ * Represents all possible errors that can occur in the LuminaNode.
+ */
 public enum LuminaError {
 
     
     
+    /**
+     * Error returned when trying to perform operations on a node that isn't running
+     */
     case NodeNotRunning
-    case NetworkError(message: String
+    /**
+     * Error returned when network operations fail
+     */
+    case NetworkError(
+        /**
+         * Description of the network error
+         */msg: String
     )
-    case StorageError(message: String
+    /**
+     * Error returned when storage operations fail
+     */
+    case StorageError(
+        /**
+         * Description of the storage error
+         */msg: String
     )
+    /**
+     * Error returned when trying to start a node that's already running
+     */
     case AlreadyRunning
+    /**
+     * Error returned when a mutex lock operation fails
+     */
     case LockError
-    case InvalidHash(message: String
+    /**
+     * Error returned when a hash string is invalid or malformed
+     */
+    case InvalidHash(
+        /**
+         * Description of why the hash is invalid
+         */msg: String
     )
-    case InvalidHeader(message: String
+    /**
+     * Error returned when a header is invalid or malformed
+     */
+    case InvalidHeader(
+        /**
+         * Description of why the header is invalid
+         */msg: String
     )
-    case StorageInit(message: String
+    /**
+     * Error returned when storage initialization fails
+     */
+    case StorageInit(
+        /**
+         * Description of why storage initialization failed
+         */msg: String
     )
 }
 
@@ -1693,21 +2016,21 @@ public struct FfiConverterTypeLuminaError: FfiConverterRustBuffer {
         
         case 1: return .NodeNotRunning
         case 2: return .NetworkError(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 3: return .StorageError(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 4: return .AlreadyRunning
         case 5: return .LockError
         case 6: return .InvalidHash(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 7: return .InvalidHeader(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 8: return .StorageInit(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -1725,14 +2048,14 @@ public struct FfiConverterTypeLuminaError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(1))
         
         
-        case let .NetworkError(message):
+        case let .NetworkError(msg):
             writeInt(&buf, Int32(2))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .StorageError(message):
+        case let .StorageError(msg):
             writeInt(&buf, Int32(3))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
         case .AlreadyRunning:
@@ -1743,19 +2066,19 @@ public struct FfiConverterTypeLuminaError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(5))
         
         
-        case let .InvalidHash(message):
+        case let .InvalidHash(msg):
             writeInt(&buf, Int32(6))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .InvalidHeader(message):
+        case let .InvalidHeader(msg):
             writeInt(&buf, Int32(7))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .StorageInit(message):
+        case let .StorageInit(msg):
             writeInt(&buf, Int32(8))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         }
     }
@@ -1791,9 +2114,10 @@ public enum Network {
      */
     case mocha
     /**
-     * Private local network.
+     * Custom network.
      */
-    case `private`
+    case custom(id: String
+    )
 }
 
 
@@ -1813,7 +2137,8 @@ public struct FfiConverterTypeNetwork: FfiConverterRustBuffer {
         
         case 3: return .mocha
         
-        case 4: return .`private`
+        case 4: return .custom(id: try FfiConverterString.read(from: &buf)
+        )
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1835,9 +2160,10 @@ public struct FfiConverterTypeNetwork: FfiConverterRustBuffer {
             writeInt(&buf, Int32(3))
         
         
-        case .`private`:
+        case let .custom(id):
             writeInt(&buf, Int32(4))
-        
+            FfiConverterString.write(id, into: &buf)
+            
         }
     }
 }
@@ -1865,40 +2191,192 @@ extension Network: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Events emitted by the node.
+ */
 
 public enum NodeEvent {
     
+    /**
+     * Node is connecting to bootnodes
+     */
     case connectingToBootnodes
-    case peerConnected(id: PeerId, trusted: Bool
+    /**
+     * Peer just connected
+     */
+    case peerConnected(
+        /**
+         * The ID of the peer.
+         */id: PeerId, 
+        /**
+         * Whether peer was in the trusted list or not.
+         */trusted: Bool
     )
-    case peerDisconnected(id: PeerId, trusted: Bool
+    case peerDisconnected(
+        /**
+         * The ID of the peer.
+         */id: PeerId, 
+        /**
+         * Whether peer was in the trusted list or not.
+         */trusted: Bool
     )
-    case samplingStarted(height: UInt64, squareWidth: UInt16, shares: [ShareCoordinate]
+    /**
+     * Sampling just started.
+     */
+    case samplingStarted(
+        /**
+         * The block height that will be sampled.
+         */height: UInt64, 
+        /**
+         * The square width of the block.
+         */squareWidth: UInt16, 
+        /**
+         * The coordinates of the shares that will be sampled.
+         */shares: [ShareCoordinate]
     )
-    case shareSamplingResult(height: UInt64, squareWidth: UInt16, row: UInt16, column: UInt16, accepted: Bool
+    /**
+     * A share was sampled.
+     */
+    case shareSamplingResult(
+        /**
+         * The block height of the share.
+         */height: UInt64, 
+        /**
+         * The square width of the block.
+         */squareWidth: UInt16, 
+        /**
+         * The row of the share.
+         */row: UInt16, 
+        /**
+         * The column of the share.
+         */column: UInt16, 
+        /**
+         * The result of the sampling of the share.
+         */accepted: Bool
     )
-    case samplingFinished(height: UInt64, accepted: Bool, tookMs: UInt64
+    /**
+     * Sampling just finished.
+     */
+    case samplingFinished(
+        /**
+         * The block height that was sampled.
+         */height: UInt64, 
+        /**
+         * The overall result of the sampling.
+         */accepted: Bool, 
+        /**
+         * How much time sampling took in milliseconds.
+         */tookMs: UInt64
     )
-    case fatalDaserError(error: String
+    /**
+     * Data sampling fatal error.
+     */
+    case fatalDaserError(
+        /**
+         * A human readable error.
+         */error: String
     )
-    case addedHeaderFromHeaderSub(height: UInt64
+    /**
+     * A new header was added from HeaderSub.
+     */
+    case addedHeaderFromHeaderSub(
+        /**
+         * The height of the header.
+         */height: UInt64
     )
+    /**
+     * Fetching header of network head just started.
+     */
     case fetchingHeadHeaderStarted
-    case fetchingHeadHeaderFinished(height: UInt64, tookMs: UInt64
+    /**
+     * Fetching header of network head just finished.
+     */
+    case fetchingHeadHeaderFinished(
+        /**
+         * The height of the network head.
+         */height: UInt64, 
+        /**
+         * How much time fetching took in milliseconds.
+         */tookMs: UInt64
     )
-    case fetchingHeadersStarted(fromHeight: UInt64, toHeight: UInt64
+    /**
+     * Fetching headers of a specific block range just started.
+     */
+    case fetchingHeadersStarted(
+        /**
+         * Start of the range.
+         */fromHeight: UInt64, 
+        /**
+         * End of the range (included).
+         */toHeight: UInt64
     )
-    case fetchingHeadersFinished(fromHeight: UInt64, toHeight: UInt64, tookMs: UInt64
+    /**
+     * Fetching headers of a specific block range just finished.
+     */
+    case fetchingHeadersFinished(
+        /**
+         * Start of the range.
+         */fromHeight: UInt64, 
+        /**
+         * End of the range (included).
+         */toHeight: UInt64, 
+        /**
+         * How much time fetching took in milliseconds.
+         */tookMs: UInt64
     )
-    case fetchingHeadersFailed(fromHeight: UInt64, toHeight: UInt64, error: String, tookMs: UInt64
+    /**
+     * Fetching headers of a specific block range just failed.
+     */
+    case fetchingHeadersFailed(
+        /**
+         * Start of the range.
+         */fromHeight: UInt64, 
+        /**
+         * End of the range (included).
+         */toHeight: UInt64, 
+        /**
+         * A human readable error.
+         */error: String, 
+        /**
+         * How much time fetching took in milliseconds.
+         */tookMs: UInt64
     )
-    case fatalSyncerError(error: String
+    /**
+     * Header syncing fatal error.
+     */
+    case fatalSyncerError(
+        /**
+         * A human readable error.
+         */error: String
     )
-    case prunedHeaders(toHeight: UInt64
+    /**
+     * Pruned headers up to and including specified height.
+     */
+    case prunedHeaders(
+        /**
+         * Last header height that was pruned
+         */toHeight: UInt64
     )
-    case fatalPrunerError(error: String
+    /**
+     * Pruning fatal error.
+     */
+    case fatalPrunerError(
+        /**
+         * A human readable error.
+         */error: String
     )
+    /**
+     * Network was compromised.
+     *
+     * This happens when a valid bad encoding fraud proof is received.
+     * Ideally it would never happen, but protection needs to exist.
+     * In case of compromised network, syncing and data sampling will
+     * stop immediately.
+     */
     case networkCompromised
+    /**
+     * Node stopped.
+     */
     case nodeStopped
 }
 
@@ -2331,76 +2809,76 @@ private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_connected_peers() != 30439) {
+    if (uniffi_native_checksum_method_luminanode_connected_peers() != 30254) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_events_channel() != 39369) {
+    if (uniffi_native_checksum_method_luminanode_events_channel() != 28447) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_header_by_hash() != 10990) {
+    if (uniffi_native_checksum_method_luminanode_get_header_by_hash() != 20937) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_header_by_height() != 15228) {
+    if (uniffi_native_checksum_method_luminanode_get_header_by_height() != 47654) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_headers() != 29414) {
+    if (uniffi_native_checksum_method_luminanode_get_headers() != 6317) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_local_head_header() != 59064) {
+    if (uniffi_native_checksum_method_luminanode_get_local_head_header() != 44310) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_network_head_header() != 31384) {
+    if (uniffi_native_checksum_method_luminanode_get_network_head_header() != 39206) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_sampling_metadata() != 62774) {
+    if (uniffi_native_checksum_method_luminanode_get_sampling_metadata() != 32274) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_is_running() != 43420) {
+    if (uniffi_native_checksum_method_luminanode_is_running() != 21427) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_listeners() != 62032) {
+    if (uniffi_native_checksum_method_luminanode_listeners() != 9761) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_local_peer_id() != 58489) {
+    if (uniffi_native_checksum_method_luminanode_local_peer_id() != 46478) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_network_info() != 30180) {
+    if (uniffi_native_checksum_method_luminanode_network_info() != 24108) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_peer_tracker_info() != 33556) {
+    if (uniffi_native_checksum_method_luminanode_peer_tracker_info() != 6425) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_head_header() != 29831) {
+    if (uniffi_native_checksum_method_luminanode_request_head_header() != 54884) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_header_by_hash() != 11696) {
+    if (uniffi_native_checksum_method_luminanode_request_header_by_hash() != 34452) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_header_by_height() != 53495) {
+    if (uniffi_native_checksum_method_luminanode_request_header_by_height() != 42554) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_verified_headers() != 13531) {
+    if (uniffi_native_checksum_method_luminanode_request_verified_headers() != 51460) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_set_peer_trust() != 31847) {
+    if (uniffi_native_checksum_method_luminanode_set_peer_trust() != 1182) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_start() != 52962) {
+    if (uniffi_native_checksum_method_luminanode_start() != 470) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_stop() != 64788) {
+    if (uniffi_native_checksum_method_luminanode_stop() != 33801) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_syncer_info() != 29592) {
+    if (uniffi_native_checksum_method_luminanode_syncer_info() != 41882) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_wait_connected() != 7062) {
+    if (uniffi_native_checksum_method_luminanode_wait_connected() != 35756) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_wait_connected_trusted() != 11440) {
+    if (uniffi_native_checksum_method_luminanode_wait_connected_trusted() != 40972) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_constructor_luminanode_new() != 38497) {
+    if (uniffi_native_checksum_constructor_luminanode_new() != 64751) {
         return InitializationResult.apiChecksumMismatch
     }
 
