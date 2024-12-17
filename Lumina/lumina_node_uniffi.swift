@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(nativeFFI)
-import nativeFFI
+#if canImport(lumina_node_uniffiFFI)
+import lumina_node_uniffiFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -25,13 +25,13 @@ fileprivate extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_native_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_lumina_node_uniffi_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_native_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_lumina_node_uniffi_rustbuffer_free(self, $0) }
     }
 }
 
@@ -509,6 +509,24 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
 
 
 
@@ -621,9 +639,15 @@ public protocol LuminaNodeProtocol : AnyObject {
     func setPeerTrust(peerId: PeerId, isTrusted: Bool) async throws 
     
     /**
-     * Starts the Lumina node. Returns true if successfully started.
+     * Start the node without optional configuration.
+     * UniFFI needs explicit handling for optional parameters to generate correct bindings for different languages.
      */
     func start() async throws  -> Bool
+    
+    /**
+     * Start the node with specific configuration
+     */
+    func startWithConfig(config: NodeStartConfig?) async throws  -> Bool
     
     /**
      * Stops the running node and closes all network connections.
@@ -685,7 +709,7 @@ open class LuminaNode:
     @_documentation(visibility: private)
 #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_native_fn_clone_luminanode(self.pointer, $0) }
+        return try! rustCall { uniffi_lumina_node_uniffi_fn_clone_luminanode(self.pointer, $0) }
     }
     /**
      * Sets a new connection to the Lumina node for the specified network.
@@ -693,8 +717,8 @@ open class LuminaNode:
 public convenience init(network: Network)throws  {
     let pointer =
         try rustCallWithError(FfiConverterTypeLuminaError.lift) {
-    uniffi_native_fn_constructor_luminanode_new(
-        FfiConverterTypeNetwork.lower(network),$0
+    uniffi_lumina_node_uniffi_fn_constructor_luminanode_new(
+        FfiConverterTypeNetwork_lower(network),$0
     )
 }
     self.init(unsafeFromRawPointer: pointer)
@@ -705,7 +729,7 @@ public convenience init(network: Network)throws  {
             return
         }
 
-        try! rustCall { uniffi_native_fn_free_luminanode(pointer, $0) }
+        try! rustCall { uniffi_lumina_node_uniffi_fn_free_luminanode(pointer, $0) }
     }
 
     
@@ -718,14 +742,14 @@ open func connectedPeers()async throws  -> [PeerId] {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_connected_peers(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_connected_peers(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypePeerId.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -738,14 +762,14 @@ open func eventsChannel()async throws  -> NodeEvent? {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_events_channel(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_events_channel(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterOptionTypeNodeEvent.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -758,14 +782,14 @@ open func getHeaderByHash(hash: String)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_get_header_by_hash(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_get_header_by_hash(
                     self.uniffiClonePointer(),
                     FfiConverterString.lower(hash)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -778,14 +802,14 @@ open func getHeaderByHeight(height: UInt64)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_get_header_by_height(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_get_header_by_height(
                     self.uniffiClonePointer(),
                     FfiConverterUInt64.lower(height)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -804,14 +828,14 @@ open func getHeaders(startHeight: UInt64?, endHeight: UInt64?)async throws  -> [
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_get_headers(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_get_headers(
                     self.uniffiClonePointer(),
                     FfiConverterOptionUInt64.lower(startHeight),FfiConverterOptionUInt64.lower(endHeight)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -824,14 +848,14 @@ open func getLocalHeadHeader()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_get_local_head_header(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_get_local_head_header(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -844,14 +868,14 @@ open func getNetworkHeadHeader()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_get_network_head_header(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_get_network_head_header(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -866,14 +890,14 @@ open func getSamplingMetadata(height: UInt64)async throws  -> String? {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_get_sampling_metadata(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_get_sampling_metadata(
                     self.uniffiClonePointer(),
                     FfiConverterUInt64.lower(height)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterOptionString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -886,14 +910,14 @@ open func isRunning()async  -> Bool {
     return
         try!  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_is_running(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_is_running(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_i8,
-            completeFunc: ffi_native_rust_future_complete_i8,
-            freeFunc: ffi_native_rust_future_free_i8,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_i8,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_i8,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_i8,
             liftFunc: FfiConverterBool.lift,
             errorHandler: nil
             
@@ -907,14 +931,14 @@ open func listeners()async throws  -> [String] {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_listeners(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_listeners(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -927,14 +951,14 @@ open func localPeerId()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_local_peer_id(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_local_peer_id(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -947,14 +971,14 @@ open func networkInfo()async throws  -> NetworkInfo {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_network_info(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_network_info(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeNetworkInfo.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -967,15 +991,15 @@ open func peerTrackerInfo()async throws  -> PeerTrackerInfo {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_peer_tracker_info(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_peer_tracker_info(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypePeerTrackerInfo.lift,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePeerTrackerInfo_lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
 }
@@ -989,14 +1013,14 @@ open func requestHeadHeader()async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_request_head_header(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_request_head_header(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1009,14 +1033,14 @@ open func requestHeaderByHash(hash: String)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_request_header_by_hash(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_request_header_by_hash(
                     self.uniffiClonePointer(),
                     FfiConverterString.lower(hash)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1029,14 +1053,14 @@ open func requestHeaderByHeight(height: UInt64)async throws  -> String {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_request_header_by_height(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_request_header_by_height(
                     self.uniffiClonePointer(),
                     FfiConverterUInt64.lower(height)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1052,14 +1076,14 @@ open func requestVerifiedHeaders(from: String, amount: UInt64)async throws  -> [
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_request_verified_headers(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_request_verified_headers(
                     self.uniffiClonePointer(),
                     FfiConverterString.lower(from),FfiConverterUInt64.lower(amount)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceString.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1072,34 +1096,55 @@ open func setPeerTrust(peerId: PeerId, isTrusted: Bool)async throws  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_set_peer_trust(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_set_peer_trust(
                     self.uniffiClonePointer(),
                     FfiConverterTypePeerId.lower(peerId),FfiConverterBool.lower(isTrusted)
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_void,
-            completeFunc: ffi_native_rust_future_complete_void,
-            freeFunc: ffi_native_rust_future_free_void,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_void,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_void,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_void,
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeLuminaError.lift
         )
 }
     
     /**
-     * Starts the Lumina node. Returns true if successfully started.
+     * Start the node without optional configuration.
+     * UniFFI needs explicit handling for optional parameters to generate correct bindings for different languages.
      */
 open func start()async throws  -> Bool {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_start(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_start(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_i8,
-            completeFunc: ffi_native_rust_future_complete_i8,
-            freeFunc: ffi_native_rust_future_free_i8,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_i8,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_i8,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeLuminaError.lift
+        )
+}
+    
+    /**
+     * Start the node with specific configuration
+     */
+open func startWithConfig(config: NodeStartConfig?)async throws  -> Bool {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_lumina_node_uniffi_fn_method_luminanode_start_with_config(
+                    self.uniffiClonePointer(),
+                    FfiConverterOptionTypeNodeStartConfig.lower(config)
+                )
+            },
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_i8,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_i8,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_i8,
             liftFunc: FfiConverterBool.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1112,14 +1157,14 @@ open func stop()async throws  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_stop(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_stop(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_void,
-            completeFunc: ffi_native_rust_future_complete_void,
-            freeFunc: ffi_native_rust_future_free_void,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_void,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_void,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_void,
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1132,14 +1177,14 @@ open func syncerInfo()async throws  -> SyncingInfo {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_syncer_info(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_syncer_info(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_rust_buffer,
-            completeFunc: ffi_native_rust_future_complete_rust_buffer,
-            freeFunc: ffi_native_rust_future_free_rust_buffer,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeSyncingInfo.lift,
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1152,14 +1197,14 @@ open func waitConnected()async throws  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_wait_connected(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_wait_connected(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_void,
-            completeFunc: ffi_native_rust_future_complete_void,
-            freeFunc: ffi_native_rust_future_free_void,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_void,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_void,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_void,
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1172,14 +1217,14 @@ open func waitConnectedTrusted()async throws  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_native_fn_method_luminanode_wait_connected_trusted(
+                uniffi_lumina_node_uniffi_fn_method_luminanode_wait_connected_trusted(
                     self.uniffiClonePointer()
                     
                 )
             },
-            pollFunc: ffi_native_rust_future_poll_void,
-            completeFunc: ffi_native_rust_future_complete_void,
-            freeFunc: ffi_native_rust_future_free_void,
+            pollFunc: ffi_lumina_node_uniffi_rust_future_poll_void,
+            completeFunc: ffi_lumina_node_uniffi_rust_future_complete_void,
+            freeFunc: ffi_lumina_node_uniffi_rust_future_free_void,
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeLuminaError.lift
         )
@@ -1647,6 +1692,145 @@ public func FfiConverterTypeNodeEventInfo_lower(_ value: NodeEventInfo) -> RustB
 }
 
 
+/**
+ * Configuration options for the Lumina node
+ */
+public struct NodeStartConfig {
+    /**
+     * Network to connect to
+     */
+    public var network: Network
+    /**
+     * Custom list of bootstrap peers to connect to.
+     * If None, uses the canonical bootnodes for the network.
+     */
+    public var bootnodes: [String]?
+    /**
+     * Custom syncing window in seconds. Default is 30 days.
+     */
+    public var syncingWindowSecs: UInt32?
+    /**
+     * Custom pruning delay after syncing window in seconds. Default is 1 hour.
+     */
+    public var pruningDelaySecs: UInt32?
+    /**
+     * Maximum number of headers in batch while syncing. Default is 128.
+     */
+    public var batchSize: UInt64?
+    /**
+     * Optional Set the keypair to be used as Node's identity. If None, generates a new Ed25519 keypair.
+     */
+    public var ed25519SecretKeyBytes: Data?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Network to connect to
+         */network: Network, 
+        /**
+         * Custom list of bootstrap peers to connect to.
+         * If None, uses the canonical bootnodes for the network.
+         */bootnodes: [String]?, 
+        /**
+         * Custom syncing window in seconds. Default is 30 days.
+         */syncingWindowSecs: UInt32?, 
+        /**
+         * Custom pruning delay after syncing window in seconds. Default is 1 hour.
+         */pruningDelaySecs: UInt32?, 
+        /**
+         * Maximum number of headers in batch while syncing. Default is 128.
+         */batchSize: UInt64?, 
+        /**
+         * Optional Set the keypair to be used as Node's identity. If None, generates a new Ed25519 keypair.
+         */ed25519SecretKeyBytes: Data?) {
+        self.network = network
+        self.bootnodes = bootnodes
+        self.syncingWindowSecs = syncingWindowSecs
+        self.pruningDelaySecs = pruningDelaySecs
+        self.batchSize = batchSize
+        self.ed25519SecretKeyBytes = ed25519SecretKeyBytes
+    }
+}
+
+
+
+extension NodeStartConfig: Equatable, Hashable {
+    public static func ==(lhs: NodeStartConfig, rhs: NodeStartConfig) -> Bool {
+        if lhs.network != rhs.network {
+            return false
+        }
+        if lhs.bootnodes != rhs.bootnodes {
+            return false
+        }
+        if lhs.syncingWindowSecs != rhs.syncingWindowSecs {
+            return false
+        }
+        if lhs.pruningDelaySecs != rhs.pruningDelaySecs {
+            return false
+        }
+        if lhs.batchSize != rhs.batchSize {
+            return false
+        }
+        if lhs.ed25519SecretKeyBytes != rhs.ed25519SecretKeyBytes {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(network)
+        hasher.combine(bootnodes)
+        hasher.combine(syncingWindowSecs)
+        hasher.combine(pruningDelaySecs)
+        hasher.combine(batchSize)
+        hasher.combine(ed25519SecretKeyBytes)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNodeStartConfig: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NodeStartConfig {
+        return
+            try NodeStartConfig(
+                network: FfiConverterTypeNetwork.read(from: &buf), 
+                bootnodes: FfiConverterOptionSequenceString.read(from: &buf), 
+                syncingWindowSecs: FfiConverterOptionUInt32.read(from: &buf), 
+                pruningDelaySecs: FfiConverterOptionUInt32.read(from: &buf), 
+                batchSize: FfiConverterOptionUInt64.read(from: &buf), 
+                ed25519SecretKeyBytes: FfiConverterOptionData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NodeStartConfig, into buf: inout [UInt8]) {
+        FfiConverterTypeNetwork.write(value.network, into: &buf)
+        FfiConverterOptionSequenceString.write(value.bootnodes, into: &buf)
+        FfiConverterOptionUInt32.write(value.syncingWindowSecs, into: &buf)
+        FfiConverterOptionUInt32.write(value.pruningDelaySecs, into: &buf)
+        FfiConverterOptionUInt64.write(value.batchSize, into: &buf)
+        FfiConverterOptionData.write(value.ed25519SecretKeyBytes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNodeStartConfig_lift(_ buf: RustBuffer) throws -> NodeStartConfig {
+    return try FfiConverterTypeNodeStartConfig.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNodeStartConfig_lower(_ value: NodeStartConfig) -> RustBuffer {
+    return FfiConverterTypeNodeStartConfig.lower(value)
+}
+
+
 public struct PeerId {
     /**
      * The peer ID stored as base58 string.
@@ -1708,87 +1892,6 @@ public func FfiConverterTypePeerId_lift(_ buf: RustBuffer) throws -> PeerId {
 #endif
 public func FfiConverterTypePeerId_lower(_ value: PeerId) -> RustBuffer {
     return FfiConverterTypePeerId.lower(value)
-}
-
-
-/**
- * Statistics of the connected peers
- */
-public struct PeerTrackerInfo {
-    /**
-     * Number of the connected peers.
-     */
-    public var numConnectedPeers: UInt64
-    /**
-     * Number of the connected trusted peers.
-     */
-    public var numConnectedTrustedPeers: UInt64
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(
-        /**
-         * Number of the connected peers.
-         */numConnectedPeers: UInt64, 
-        /**
-         * Number of the connected trusted peers.
-         */numConnectedTrustedPeers: UInt64) {
-        self.numConnectedPeers = numConnectedPeers
-        self.numConnectedTrustedPeers = numConnectedTrustedPeers
-    }
-}
-
-
-
-extension PeerTrackerInfo: Equatable, Hashable {
-    public static func ==(lhs: PeerTrackerInfo, rhs: PeerTrackerInfo) -> Bool {
-        if lhs.numConnectedPeers != rhs.numConnectedPeers {
-            return false
-        }
-        if lhs.numConnectedTrustedPeers != rhs.numConnectedTrustedPeers {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(numConnectedPeers)
-        hasher.combine(numConnectedTrustedPeers)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypePeerTrackerInfo: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PeerTrackerInfo {
-        return
-            try PeerTrackerInfo(
-                numConnectedPeers: FfiConverterUInt64.read(from: &buf), 
-                numConnectedTrustedPeers: FfiConverterUInt64.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: PeerTrackerInfo, into buf: inout [UInt8]) {
-        FfiConverterUInt64.write(value.numConnectedPeers, into: &buf)
-        FfiConverterUInt64.write(value.numConnectedTrustedPeers, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypePeerTrackerInfo_lift(_ buf: RustBuffer) throws -> PeerTrackerInfo {
-    return try FfiConverterTypePeerTrackerInfo.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypePeerTrackerInfo_lower(_ value: PeerTrackerInfo) -> RustBuffer {
-    return FfiConverterTypePeerTrackerInfo.lower(value)
 }
 
 
@@ -2092,102 +2195,6 @@ extension LuminaError: Foundation.LocalizedError {
         String(reflecting: self)
     }
 }
-
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
-/**
- * Supported Celestia networks.
- */
-
-public enum Network {
-    
-    /**
-     * Celestia mainnet.
-     */
-    case mainnet
-    /**
-     * Arabica testnet.
-     */
-    case arabica
-    /**
-     * Mocha testnet.
-     */
-    case mocha
-    /**
-     * Custom network.
-     */
-    case custom(id: String
-    )
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeNetwork: FfiConverterRustBuffer {
-    typealias SwiftType = Network
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Network {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-        
-        case 1: return .mainnet
-        
-        case 2: return .arabica
-        
-        case 3: return .mocha
-        
-        case 4: return .custom(id: try FfiConverterString.read(from: &buf)
-        )
-        
-        default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: Network, into buf: inout [UInt8]) {
-        switch value {
-        
-        
-        case .mainnet:
-            writeInt(&buf, Int32(1))
-        
-        
-        case .arabica:
-            writeInt(&buf, Int32(2))
-        
-        
-        case .mocha:
-            writeInt(&buf, Int32(3))
-        
-        
-        case let .custom(id):
-            writeInt(&buf, Int32(4))
-            FfiConverterString.write(id, into: &buf)
-            
-        }
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeNetwork_lift(_ buf: RustBuffer) throws -> Network {
-    return try FfiConverterTypeNetwork.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeNetwork_lower(_ value: Network) -> RustBuffer {
-    return FfiConverterTypeNetwork.lower(value)
-}
-
-
-
-extension Network: Equatable, Hashable {}
-
-
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -2579,6 +2586,30 @@ extension NodeEvent: Equatable, Hashable {}
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = UInt32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
@@ -2627,6 +2658,54 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionData: FfiConverterRustBuffer {
+    typealias SwiftType = Data?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterData.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterData.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeNodeStartConfig: FfiConverterRustBuffer {
+    typealias SwiftType = NodeStartConfig?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeNodeStartConfig.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeNodeStartConfig.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeNodeEvent: FfiConverterRustBuffer {
     typealias SwiftType = NodeEvent?
 
@@ -2643,6 +2722,30 @@ fileprivate struct FfiConverterOptionTypeNodeEvent: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeNodeEvent.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceString.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -2747,6 +2850,10 @@ fileprivate struct FfiConverterSequenceTypeShareCoordinate: FfiConverterRustBuff
         return seq
     }
 }
+
+
+
+
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
@@ -2805,80 +2912,83 @@ private var initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
-    let scaffolding_contract_version = ffi_native_uniffi_contract_version()
+    let scaffolding_contract_version = ffi_lumina_node_uniffi_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_connected_peers() != 30254) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_connected_peers() != 17234) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_events_channel() != 28447) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_events_channel() != 14088) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_header_by_hash() != 20937) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_get_header_by_hash() != 61469) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_header_by_height() != 47654) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_get_header_by_height() != 12003) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_headers() != 6317) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_get_headers() != 26729) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_local_head_header() != 44310) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_get_local_head_header() != 34761) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_network_head_header() != 39206) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_get_network_head_header() != 15670) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_get_sampling_metadata() != 32274) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_get_sampling_metadata() != 54906) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_is_running() != 21427) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_is_running() != 50837) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_listeners() != 9761) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_listeners() != 33420) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_local_peer_id() != 46478) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_local_peer_id() != 23590) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_network_info() != 24108) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_network_info() != 11790) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_peer_tracker_info() != 6425) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_peer_tracker_info() != 26433) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_head_header() != 54884) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_request_head_header() != 42787) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_header_by_hash() != 34452) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_request_header_by_hash() != 34712) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_header_by_height() != 42554) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_request_header_by_height() != 42079) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_request_verified_headers() != 51460) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_request_verified_headers() != 29171) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_set_peer_trust() != 1182) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_set_peer_trust() != 14847) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_start() != 470) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_start() != 55689) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_stop() != 33801) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_start_with_config() != 44426) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_syncer_info() != 41882) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_stop() != 33053) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_wait_connected() != 35756) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_syncer_info() != 20757) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_method_luminanode_wait_connected_trusted() != 40972) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_wait_connected() != 24979) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_native_checksum_constructor_luminanode_new() != 64751) {
+    if (uniffi_lumina_node_uniffi_checksum_method_luminanode_wait_connected_trusted() != 57033) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lumina_node_uniffi_checksum_constructor_luminanode_new() != 10506) {
         return InitializationResult.apiChecksumMismatch
     }
 

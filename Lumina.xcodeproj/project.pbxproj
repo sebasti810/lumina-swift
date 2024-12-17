@@ -27,6 +27,19 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		0841792A2D104CBA0084E537 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		08B02CA52D01B26E00CF70CC /* Lumina.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lumina.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		08B02CB52D01B27000CF70CC /* LuminaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LuminaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -117,6 +130,7 @@
 				08B02CA12D01B26E00CF70CC /* Sources */,
 				08B02CA22D01B26E00CF70CC /* Frameworks */,
 				08B02CA32D01B26E00CF70CC /* Resources */,
+				0841792A2D104CBA0084E537 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

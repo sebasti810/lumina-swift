@@ -376,7 +376,7 @@ struct NetworkSelectionView: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach([Network.mainnet, .arabica, .mocha, .custom(id: "private")], id: \.self) { network in
+                ForEach([Network.mainnet, .arabica, .mocha, .custom(NetworkId(id: "private"))], id: \.self) { network in
                     Button {
                         Task {
                             await viewModel.changeNetwork(network)
