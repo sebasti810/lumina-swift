@@ -32,7 +32,10 @@ class LuminaViewModel: ObservableObject {
     
     private func initializeNode() async {
         do {
-            node = try LuminaNode(network: networkType)
+            let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+            let documentsDirectory = paths[0].path
+            let config = NodeConfig(basePath: documentsDirectory, network: networkType, bootnodes: nil, syncingWindowSecs: nil, pruningDelaySecs: nil, batchSize: nil, ed25519SecretKeyBytes: nil)
+            node = try LuminaNode(config: config)
             isRunning = await node?.isRunning() ?? false
             if hasInteracted {
                 await updateStats()
@@ -149,13 +152,17 @@ class LuminaViewModel: ObservableObject {
         eventCheckTimer?.invalidate()
         eventCheckTimer = nil
     }
-        
+    
     private func checkForEvents() async {
         guard let node = node else { return }
         
         do {
-            while let event = try await node.eventsChannel() {
+            if let event = try await node.eventsChannel() {
                 handleEvent(event)
+            }
+        } catch let error as LuminaError {
+            if case .NetworkError(let msg) = error, msg != "Event channel empty" {
+                self.error = error
             }
         } catch {
             self.error = error
